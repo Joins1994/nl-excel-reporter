@@ -1,0 +1,1419 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NL Excel Reporter - 自然语言报表工具</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<style>
+:root {
+  --bg: #0f1117;
+  --surface: #1a1d27;
+  --surface2: #242836;
+  --border: #2e3348;
+  --text: #e4e6f0;
+  --text2: #8b8fa8;
+  --accent: #6c7cff;
+  --accent2: #4f5bd5;
+  --success: #34d399;
+  --error: #f87171;
+  --warn: #fbbf24;
+  --radius: 12px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.6;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+/* Header */
+header {
+  text-align: center;
+  padding: 40px 0 32px;
+}
+
+header h1 {
+  font-size: 28px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #6c7cff, #34d399);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 8px;
+}
+
+header p {
+  color: var(--text2);
+  font-size: 15px;
+}
+
+/* Cards */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-bottom: 20px;
+}
+
+.card-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.card-title .icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+/* Upload Area */
+.upload-zone {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 48px 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s;
+  position: relative;
+}
+
+.upload-zone:hover, .upload-zone.dragover {
+  border-color: var(--accent);
+  background: rgba(108, 124, 255, 0.05);
+}
+
+.upload-zone .upload-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  opacity: 0.6;
+}
+
+.upload-zone h3 {
+  font-size: 16px;
+  margin-bottom: 4px;
+}
+
+.upload-zone p {
+  color: var(--text2);
+  font-size: 13px;
+}
+
+.upload-zone input[type="file"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* Dataset Info */
+.dataset-info {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.stat-badge {
+  background: var(--surface2);
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 13px;
+}
+
+.stat-badge .label {
+  color: var(--text2);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-badge .value {
+  font-weight: 600;
+  font-size: 15px;
+  margin-top: 2px;
+}
+
+/* Column Tags */
+.column-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.col-tag {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+}
+
+.col-tag .dtype {
+  color: var(--text2);
+  font-size: 10px;
+  margin-left: 4px;
+}
+
+/* Query Input */
+.query-area {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.query-area textarea {
+  flex: 1;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  color: var(--text);
+  font-size: 15px;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 52px;
+  max-height: 200px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.query-area textarea:focus {
+  border-color: var(--accent);
+}
+
+.query-area textarea::placeholder {
+  color: var(--text2);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: var(--accent2);
+  transform: translateY(-1px);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-secondary {
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.btn-secondary:hover {
+  background: var(--border);
+}
+
+.btn-sm {
+  padding: 8px 14px;
+  font-size: 12px;
+  border-radius: 8px;
+}
+
+/* Example queries */
+.example-queries {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.example-chip {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 12px;
+  color: var(--text2);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.example-chip:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+/* Results */
+.result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.result-title {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.result-desc {
+  color: var(--text2);
+  font-size: 13px;
+  margin-top: 2px;
+}
+
+.result-meta {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.source-badge {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.source-badge.llm { background: rgba(108, 124, 255, 0.2); color: var(--accent); }
+.source-badge.local { background: rgba(52, 211, 153, 0.2); color: var(--success); }
+
+/* Chart */
+.chart-container {
+  width: 100%;
+  height: 400px;
+  background: var(--surface2);
+  border-radius: 10px;
+  margin-bottom: 16px;
+}
+
+/* Table */
+.data-table-wrapper {
+  overflow-x: auto;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.data-table th {
+  background: var(--surface2);
+  padding: 10px 14px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--text2);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+}
+
+.data-table td {
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.data-table tr:last-child td { border-bottom: none; }
+
+.data-table tr:hover td {
+  background: rgba(108, 124, 255, 0.04);
+}
+
+/* Code block */
+.code-block {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+  font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.7;
+  overflow-x: auto;
+  color: #a5b4fc;
+  margin-top: 12px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* Loading */
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  gap: 12px;
+  color: var(--text2);
+}
+
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Error */
+.error-msg {
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  border-radius: 10px;
+  padding: 16px;
+  color: var(--error);
+  font-size: 14px;
+}
+
+/* History */
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.history-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: var(--surface2);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+  font-size: 13px;
+}
+
+.history-item:hover { background: var(--border); }
+
+.history-item .time {
+  color: var(--text2);
+  font-size: 11px;
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  background: var(--surface2);
+  border-radius: 10px;
+  padding: 4px;
+  width: fit-content;
+}
+
+.tab {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  color: var(--text2);
+  transition: all 0.2s;
+  border: none;
+  background: none;
+}
+
+.tab.active {
+  background: var(--accent);
+  color: white;
+}
+
+/* Hidden */
+.hidden { display: none !important; }
+
+/* Preview table */
+.preview-table-wrapper {
+  max-height: 300px;
+  overflow: auto;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  margin-top: 16px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .container { padding: 12px; }
+  .query-area { flex-direction: column; }
+  .dataset-info { gap: 10px; }
+  .result-header { flex-direction: column; gap: 8px; align-items: flex-start; }
+}
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 20px;
+  font-size: 14px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  z-index: 1000;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* Settings button */
+.settings-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 16px;
+  padding: 10px 20px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.settings-btn:hover {
+  border-color: var(--accent);
+  background: var(--border);
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 32px;
+  width: 90%;
+  max-width: 560px;
+  box-shadow: 0 16px 64px rgba(0,0,0,0.5);
+  animation: slideUpModal 0.3s ease;
+}
+
+@keyframes slideUpModal {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.modal h2 {
+  font-size: 20px;
+  margin-bottom: 6px;
+}
+
+.modal .subtitle {
+  color: var(--text2);
+  font-size: 13px;
+  margin-bottom: 24px;
+}
+
+.form-group {
+  margin-bottom: 18px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--text2);
+}
+
+.form-group input, .form-group select {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: var(--text);
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.form-group input:focus, .form-group select:focus {
+  border-color: var(--accent);
+}
+
+.form-group .hint {
+  font-size: 11px;
+  color: var(--text2);
+  margin-top: 4px;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.modal-actions .btn { flex: 1; justify-content: center; }
+
+.test-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  margin-top: 10px;
+  min-height: 20px;
+}
+
+.test-status.success { color: var(--success); }
+.test-status.error { color: var(--error); }
+
+.presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 18px;
+}
+
+.preset-chip {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--text2);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.preset-chip:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>📊 NL Excel Reporter</h1>
+    <p>上传 Excel 文件，用自然语言描述需求，自动生成个性化报表</p>
+    <button class="settings-btn" onclick="openSettings()" title="LLM 配置">⚙️ LLM 配置</button>
+  </header>
+
+  <!-- Step 1: Upload -->
+  <div class="card" id="upload-card">
+    <div class="card-title">
+      <span class="icon" style="background:rgba(108,124,255,0.15);color:var(--accent)">1</span>
+      上传数据文件
+    </div>
+    <div class="upload-zone" id="upload-zone">
+      <div class="upload-icon">📁</div>
+      <h3>拖放文件到此处，或点击选择</h3>
+      <p>支持 .xlsx, .xls, .csv 格式，最大 50MB</p>
+      <input type="file" id="file-input" accept=".xlsx,.xls,.csv">
+    </div>
+  </div>
+
+  <!-- Dataset Info -->
+  <div class="card hidden" id="dataset-card">
+    <div class="card-title">
+      <span class="icon" style="background:rgba(52,211,153,0.15);color:var(--success)">✓</span>
+      <span id="dataset-name">-</span>
+    </div>
+    <div class="dataset-info">
+      <div class="stat-badge">
+        <div class="label">行数</div>
+        <div class="value" id="stat-rows">-</div>
+      </div>
+      <div class="stat-badge">
+        <div class="label">列数</div>
+        <div class="value" id="stat-cols">-</div>
+      </div>
+      <div class="stat-badge">
+        <div class="label">列字段</div>
+        <div class="value" id="stat-fields">-</div>
+      </div>
+    </div>
+    <div class="column-tags" id="column-tags"></div>
+
+    <div class="preview-table-wrapper" id="preview-wrapper"></div>
+  </div>
+
+  <!-- Step 2: Query -->
+  <div class="card hidden" id="query-card">
+    <div class="card-title">
+      <span class="icon" style="background:rgba(251,191,36,0.15);color:var(--warn)">2</span>
+      描述你的需求
+    </div>
+    <div class="query-area">
+      <textarea id="query-input" rows="2" placeholder="例如：按部门统计销售额，显示前10名，用柱状图展示..."></textarea>
+      <button class="btn btn-primary" id="query-btn" onclick="submitQuery()">
+        🚀 生成报表
+      </button>
+    </div>
+    <div class="example-queries" id="example-queries">
+      <span class="example-chip" onclick="setQuery('数据概览')">📋 数据概览</span>
+      <span class="example-chip" onclick="setQuery('前10行数据')">📄 前10行</span>
+      <span class="example-chip" onclick="setQuery('各列数据统计')">📊 列分布统计</span>
+    </div>
+  </div>
+
+  <!-- Step 3: Results -->
+  <div class="card hidden" id="result-card">
+    <div class="result-header">
+      <div>
+        <div class="result-title" id="result-title">-</div>
+        <div class="result-desc" id="result-desc">-</div>
+      </div>
+      <div class="result-meta">
+        <span class="source-badge" id="source-badge">-</span>
+        <button class="btn btn-secondary btn-sm" onclick="exportCSV()">📥 导出 CSV</button>
+        <button class="btn btn-secondary btn-sm" onclick="toggleCode()">🔧 代码</button>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" data-tab="chart" onclick="switchTab('chart')">📊 图表</button>
+      <button class="tab" data-tab="table" onclick="switchTab('table')">📋 表格</button>
+    </div>
+
+    <!-- Chart View -->
+    <div id="tab-chart">
+      <div class="chart-container" id="chart-container"></div>
+    </div>
+
+    <!-- Table View -->
+    <div id="tab-table" class="hidden">
+      <div class="data-table-wrapper" id="result-table-wrapper"></div>
+    </div>
+
+    <!-- Code View -->
+    <div class="code-block hidden" id="code-block"></div>
+  </div>
+
+  <!-- Loading -->
+  <div class="card hidden" id="loading-card">
+    <div class="loading">
+      <div class="spinner"></div>
+      <span>正在分析数据，生成报表...</span>
+    </div>
+  </div>
+
+  <!-- Error -->
+  <div class="card hidden" id="error-card">
+    <div class="error-msg" id="error-msg"></div>
+  </div>
+
+  <!-- History -->
+  <div class="card hidden" id="history-card">
+    <div class="card-title">
+      <span class="icon" style="background:rgba(108,124,255,0.15);color:var(--accent)">📜</span>
+      查询历史
+    </div>
+    <div class="history-list" id="history-list"></div>
+  </div>
+</div>
+
+<script>
+// ---------------------------------------------------------------------------
+// State
+// ---------------------------------------------------------------------------
+let currentDataset = null;
+let currentResult = null;
+let chartInstance = null;
+let queryHistory = [];
+
+// ---------------------------------------------------------------------------
+// Upload
+// ---------------------------------------------------------------------------
+const uploadZone = document.getElementById('upload-zone');
+const fileInput = document.getElementById('file-input');
+
+uploadZone.addEventListener('dragover', e => {
+  e.preventDefault();
+  uploadZone.classList.add('dragover');
+});
+
+uploadZone.addEventListener('dragleave', () => {
+  uploadZone.classList.remove('dragover');
+});
+
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('dragover');
+  if (e.dataTransfer.files.length) {
+    uploadFile(e.dataTransfer.files[0]);
+  }
+});
+
+fileInput.addEventListener('change', () => {
+  if (fileInput.files.length) {
+    uploadFile(fileInput.files[0]);
+  }
+});
+
+async function uploadFile(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  showLoading(true);
+  hideError();
+
+  try {
+    const resp = await fetch('/api/upload', { method: 'POST', body: formData });
+    const data = await resp.json();
+
+    if (!resp.ok) {
+      showError(data.error || '上传失败');
+      return;
+    }
+
+    currentDataset = data;
+    showDatasetInfo(data);
+    showQueryCard();
+    showToast(`✅ 已加载 ${data.filename} (${data.rows} 行 × ${data.cols} 列)`);
+  } catch (e) {
+    showError('网络错误: ' + e.message);
+  } finally {
+    showLoading(false);
+  }
+}
+
+function showDatasetInfo(data) {
+  document.getElementById('dataset-card').classList.remove('hidden');
+  document.getElementById('dataset-name').textContent = data.filename;
+  document.getElementById('stat-rows').textContent = data.rows.toLocaleString();
+  document.getElementById('stat-cols').textContent = data.cols;
+  document.getElementById('stat-fields').textContent = data.columns.length;
+
+  // Column tags
+  const tagsEl = document.getElementById('column-tags');
+  tagsEl.innerHTML = data.columns.map(col => {
+    const dtype = data.dtypes[col] || '';
+    const short = dtype.includes('int') ? 'int' : dtype.includes('float') ? 'float' : dtype.includes('datetime') ? 'date' : 'str';
+    return `<span class="col-tag">${col}<span class="dtype">${short}</span></span>`;
+  }).join('');
+
+  // Preview table
+  if (data.preview && data.preview.length > 0) {
+    document.getElementById('preview-wrapper').innerHTML = buildTable(data.preview, data.columns);
+  }
+
+  // Generate example queries based on columns
+  generateExamples(data.columns, data.dtypes);
+}
+
+function generateExamples(columns, dtypes) {
+  const examples = [
+    { label: '📋 数据概览', query: '数据概览' },
+    { label: '📄 前10行', query: '前10行数据' },
+  ];
+
+  // Find first text column
+  const textCol = columns.find(c => {
+    const d = dtypes[c] || '';
+    return d.includes('object') || d.includes('str');
+  });
+  if (textCol) {
+    examples.push({ label: `📊 ${textCol}分布`, query: `${textCol}的分布统计` });
+  }
+
+  // Find first numeric column
+  const numCol = columns.find(c => {
+    const d = dtypes[c] || '';
+    return d.includes('int') || d.includes('float');
+  });
+
+  if (textCol && numCol) {
+    examples.push({ label: `📈 按${textCol}统计${numCol}`, query: `按${textCol}分组统计${numCol}的总和，显示前15名` });
+  }
+
+  if (numCol) {
+    examples.push({ label: `🔢 ${numCol}汇总`, query: `${numCol}的最大值、最小值、平均值、总和` });
+  }
+
+  const container = document.getElementById('example-queries');
+  container.innerHTML = examples.map(e =>
+    `<span class="example-chip" onclick="setQuery('${e.query}')">${e.label}</span>`
+  ).join('');
+}
+
+// ---------------------------------------------------------------------------
+// Query
+// ---------------------------------------------------------------------------
+function setQuery(text) {
+  document.getElementById('query-input').value = text;
+  document.getElementById('query-input').focus();
+}
+
+document.getElementById('query-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    submitQuery();
+  }
+});
+
+async function submitQuery() {
+  const query = document.getElementById('query-input').value.trim();
+  if (!query) return;
+  if (!currentDataset) { showError('请先上传数据文件'); return; }
+
+  const btn = document.getElementById('query-btn');
+  btn.disabled = true;
+  showLoading(true);
+  hideError();
+  document.getElementById('result-card').classList.add('hidden');
+
+  try {
+    const resp = await fetch('/api/query', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        dataset_id: currentDataset.dataset_id,
+        query: query,
+      }),
+    });
+
+    const data = await resp.json();
+
+    if (!resp.ok) {
+      showError(data.error || '查询失败');
+      if (data.code) {
+        document.getElementById('code-block').textContent = data.code;
+        document.getElementById('code-block').classList.remove('hidden');
+      }
+      return;
+    }
+
+    currentResult = data;
+    showResult(data);
+    addHistory(query, data);
+    showToast('✅ 报表生成成功');
+  } catch (e) {
+    showError('网络错误: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    showLoading(false);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Results
+// ---------------------------------------------------------------------------
+function showResult(data) {
+  const card = document.getElementById('result-card');
+  card.classList.remove('hidden');
+
+  document.getElementById('result-title').textContent = data.title || '报表结果';
+  document.getElementById('result-desc').textContent = data.description || '';
+
+  const badge = document.getElementById('source-badge');
+  badge.textContent = data.source === 'llm' ? 'LLM 生成' : '内置引擎';
+  badge.className = 'source-badge ' + (data.source || 'local');
+
+  // Code
+  document.getElementById('code-block').textContent = data.code || '';
+  document.getElementById('code-block').classList.add('hidden');
+
+  // Table
+  if (data.data && data.data.length > 0) {
+    document.getElementById('result-table-wrapper').innerHTML = buildTable(data.data, data.columns);
+  }
+
+  // Chart
+  renderChart(data);
+
+  // Default to chart tab
+  switchTab('chart');
+}
+
+function renderChart(data) {
+  const container = document.getElementById('chart-container');
+  if (chartInstance) chartInstance.dispose();
+  chartInstance = echarts.init(container, 'dark');
+
+  const { chart_type, data: rows, columns, x_column, y_column, title } = data;
+
+  if (!rows || rows.length === 0) {
+    chartInstance.dispose();
+    container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text2)">无数据可展示</div>';
+    return;
+  }
+
+  // Determine columns
+  let xCol = x_column || columns[0];
+  let yCol = y_column || (columns.length > 1 ? columns[1] : columns[0]);
+
+  // Ensure columns exist
+  if (!columns.includes(xCol)) xCol = columns[0];
+  if (!columns.includes(yCol)) yCol = columns.length > 1 ? columns[1] : columns[0];
+
+  const xData = rows.map(r => String(r[xCol] ?? ''));
+
+  // Dark theme colors
+  const colors = ['#6c7cff', '#34d399', '#fbbf24', '#f87171', '#a78bfa', '#38bdf8', '#fb923c', '#e879f9'];
+
+  let option = {};
+
+  if (chart_type === 'number' || (rows.length === 1 && columns.length <= 2)) {
+    // Number card
+    const val = rows[0][yCol] ?? rows[0][columns[columns.length - 1]];
+    option = {
+      backgroundColor: 'transparent',
+      title: {
+        text: typeof val === 'number' ? val.toLocaleString() : String(val),
+        left: 'center', top: 'middle',
+        textStyle: { fontSize: 48, fontWeight: 'bold', color: '#6c7cff' },
+      },
+      subtitle: {
+        text: title || yCol,
+        left: 'center', top: '65%',
+        textStyle: { fontSize: 16, color: '#8b8fa8' },
+      },
+    };
+  } else if (chart_type === 'pie') {
+    const pieData = rows.map((r, i) => ({
+      name: String(r[xCol]),
+      value: Number(r[yCol]) || 0,
+    }));
+    option = {
+      backgroundColor: 'transparent',
+      tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+      legend: { type: 'scroll', bottom: 10, textStyle: { color: '#8b8fa8' } },
+      color: colors,
+      series: [{
+        type: 'pie',
+        radius: ['35%', '65%'],
+        center: ['50%', '45%'],
+        data: pieData,
+        label: { color: '#e4e6f0', fontSize: 12 },
+        emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0,0,0,0.5)' } },
+      }],
+    };
+  } else if (chart_type === 'line') {
+    // Find all numeric columns
+    const numCols = columns.filter(c => c !== xCol && typeof rows[0][c] === 'number');
+    const series = (numCols.length > 0 ? numCols : [yCol]).map((c, i) => ({
+      name: c,
+      type: 'line',
+      data: rows.map(r => Number(r[c]) || 0),
+      smooth: true,
+      lineStyle: { width: 2 },
+    }));
+    option = {
+      backgroundColor: 'transparent',
+      tooltip: { trigger: 'axis' },
+      legend: { data: series.map(s => s.name), textStyle: { color: '#8b8fa8' }, top: 5 },
+      grid: { left: 60, right: 30, top: 50, bottom: 40 },
+      xAxis: { type: 'category', data: xData, axisLabel: { color: '#8b8fa8', rotate: xData.length > 10 ? 30 : 0 } },
+      yAxis: { type: 'value', axisLabel: { color: '#8b8fa8' }, splitLine: { lineStyle: { color: '#2e3348' } } },
+      color: colors,
+      series,
+    };
+  } else if (chart_type === 'scatter') {
+    option = {
+      backgroundColor: 'transparent',
+      tooltip: { trigger: 'item' },
+      grid: { left: 60, right: 30, top: 30, bottom: 40 },
+      xAxis: { name: xCol, type: 'value', axisLabel: { color: '#8b8fa8' }, splitLine: { lineStyle: { color: '#2e3348' } } },
+      yAxis: { name: yCol, type: 'value', axisLabel: { color: '#8b8fa8' }, splitLine: { lineStyle: { color: '#2e3348' } } },
+      color: colors,
+      series: [{
+        type: 'scatter',
+        symbolSize: 12,
+        data: rows.map(r => [Number(r[xCol]) || 0, Number(r[yCol]) || 0]),
+      }],
+    };
+  } else {
+    // Bar chart (default)
+    const numCols = columns.filter(c => c !== xCol && typeof rows[0][c] === 'number');
+    const series = (numCols.length > 0 ? numCols : [yCol]).map((c, i) => ({
+      name: c,
+      type: 'bar',
+      data: rows.map(r => Number(r[c]) || 0),
+      barMaxWidth: 40,
+      itemStyle: { borderRadius: [4, 4, 0, 0] },
+    }));
+    option = {
+      backgroundColor: 'transparent',
+      tooltip: { trigger: 'axis' },
+      legend: numCols.length > 1 ? { data: series.map(s => s.name), textStyle: { color: '#8b8fa8' }, top: 5 } : undefined,
+      grid: { left: 80, right: 30, top: numCols.length > 1 ? 50 : 30, bottom: 60 },
+      xAxis: {
+        type: 'category',
+        data: xData,
+        axisLabel: { color: '#8b8fa8', rotate: xData.length > 8 ? 30 : 0, fontSize: 11 },
+      },
+      yAxis: {
+        type: 'value',
+        axisLabel: { color: '#8b8fa8' },
+        splitLine: { lineStyle: { color: '#2e3348' } },
+      },
+      color: colors,
+      series,
+    };
+  }
+
+  chartInstance.setOption(option);
+
+  // Resize
+  window.addEventListener('resize', () => chartInstance && chartInstance.resize());
+}
+
+// ---------------------------------------------------------------------------
+// Table builder
+// ---------------------------------------------------------------------------
+function buildTable(rows, columns) {
+  if (!rows || rows.length === 0) return '<p style="padding:20px;color:var(--text2)">无数据</p>';
+
+  const cols = columns || Object.keys(rows[0]);
+  let html = '<table class="data-table"><thead><tr>';
+  html += '<th>#</th>';
+  cols.forEach(c => { html += `<th>${esc(String(c))}</th>`; });
+  html += '</tr></thead><tbody>';
+
+  rows.forEach((row, i) => {
+    html += '<tr>';
+    html += `<td style="color:var(--text2)">${i + 1}</td>`;
+    cols.forEach(c => {
+      let val = row[c];
+      if (val === null || val === undefined) val = '-';
+      else if (typeof val === 'number') val = Number.isInteger(val) ? val.toLocaleString() : val.toLocaleString(undefined, { maximumFractionDigits: 4 });
+      html += `<td>${esc(String(val))}</td>`;
+    });
+    html += '</tr>';
+  });
+
+  html += '</tbody></table>';
+  return html;
+}
+
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// ---------------------------------------------------------------------------
+// Tabs
+// ---------------------------------------------------------------------------
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  document.getElementById('tab-chart').classList.toggle('hidden', tab !== 'chart');
+  document.getElementById('tab-table').classList.toggle('hidden', tab !== 'table');
+
+  if (tab === 'chart' && chartInstance) {
+    setTimeout(() => chartInstance.resize(), 50);
+  }
+}
+
+function toggleCode() {
+  document.getElementById('code-block').classList.toggle('hidden');
+}
+
+// ---------------------------------------------------------------------------
+// Export
+// ---------------------------------------------------------------------------
+async function exportCSV() {
+  if (!currentResult || !currentResult.data) return;
+
+  try {
+    const resp = await fetch('/api/export', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        data: currentResult.data,
+        title: currentResult.title || 'report',
+      }),
+    });
+
+    const blob = await resp.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${currentResult.title || 'report'}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('📥 CSV 已下载');
+  } catch (e) {
+    showToast('❌ 导出失败: ' + e.message);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// History
+// ---------------------------------------------------------------------------
+function addHistory(query, result) {
+  queryHistory.unshift({
+    query,
+    title: result.title,
+    time: new Date().toLocaleTimeString(),
+    result,
+  });
+
+  if (queryHistory.length > 20) queryHistory.pop();
+
+  const card = document.getElementById('history-card');
+  card.classList.remove('hidden');
+
+  const list = document.getElementById('history-list');
+  list.innerHTML = queryHistory.map((h, i) => `
+    <div class="history-item" onclick="replayHistory(${i})">
+      <span>${esc(h.query)}</span>
+      <span class="time">${h.time}</span>
+    </div>
+  `).join('');
+}
+
+function replayHistory(index) {
+  const h = queryHistory[index];
+  if (h) {
+    currentResult = h.result;
+    showResult(h.result);
+    document.getElementById('query-input').value = h.query;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// UI helpers
+// ---------------------------------------------------------------------------
+function showLoading(show) {
+  document.getElementById('loading-card').classList.toggle('hidden', !show);
+}
+
+function showError(msg) {
+  const card = document.getElementById('error-card');
+  document.getElementById('error-msg').textContent = msg;
+  card.classList.remove('hidden');
+}
+
+function hideError() {
+  document.getElementById('error-card').classList.add('hidden');
+}
+
+function showQueryCard() {
+  document.getElementById('query-card').classList.remove('hidden');
+  document.getElementById('query-input').focus();
+}
+
+function showToast(msg) {
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.textContent = msg;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 3000);
+}
+
+// ---------------------------------------------------------------------------
+// LLM Settings Modal
+// ---------------------------------------------------------------------------
+let settingsOpen = false;
+
+function openSettings() {
+  settingsOpen = true;
+  loadConfig();
+  renderModal();
+}
+
+function closeSettings() {
+  settingsOpen = false;
+  const el = document.getElementById('settings-modal');
+  if (el) el.remove();
+}
+
+function renderModal() {
+  const existing = document.getElementById('settings-modal');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'settings-modal';
+  overlay.className = 'modal-overlay';
+  overlay.onclick = (e) => { if (e.target === overlay) closeSettings(); };
+
+  overlay.innerHTML = `
+    <div class="modal">
+      <h2>⚙️ LLM API 配置</h2>
+      <p class="subtitle">支持任何 OpenAI 兼容的 API (OpenAI / DeepSeek / Moonshot / SiliconFlow 等)</p>
+
+      <label style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:8px;display:block">快速选择</label>
+      <div class="presets">
+        <span class="preset-chip" onclick="applyPreset('openai')">OpenAI</span>
+        <span class="preset-chip" onclick="applyPreset('deepseek')">DeepSeek</span>
+        <span class="preset-chip" onclick="applyPreset('moonshot')">Moonshot /  Kimi</span>
+        <span class="preset-chip" onclick="applyPreset('siliconflow')">SiliconFlow</span>
+        <span class="preset-chip" onclick="applyPreset('custom')">自定义</span>
+      </div>
+
+      <div class="form-group">
+        <label>API 地址 (Base URL)</label>
+        <input type="text" id="cfg-base" placeholder="https://api.openai.com/v1">
+        <div class="hint">OpenAI 兼容的 API 端点</div>
+      </div>
+
+      <div class="form-group">
+        <label>API Key</label>
+        <input type="password" id="cfg-key" placeholder="sk-...">
+        <div class="hint">你的 API 密钥</div>
+      </div>
+
+      <div class="form-group">
+        <label>模型名称</label>
+        <input type="text" id="cfg-model" placeholder="gpt-4o-mini">
+        <div class="hint">如 gpt-4o-mini, deepseek-chat, moonshot-v1-8k 等</div>
+      </div>
+
+      <div class="test-status" id="test-status"></div>
+
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="testConnection()">🔌 测试连接</button>
+        <button class="btn btn-primary" onclick="saveConfigAndClose()">💾 保存并关闭</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+}
+
+const presets = {
+  openai: { base: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
+  deepseek: { base: 'https://api.deepseek.com/v1', model: 'deepseek-chat' },
+  moonshot: { base: 'https://api.moonshot.cn/v1', model: 'moonshot-v1-8k' },
+  siliconflow: { base: 'https://api.siliconflow.cn/v1', model: 'Qwen/Qwen2.5-72B-Instruct' },
+  custom: { base: '', model: '' },
+};
+
+function applyPreset(name) {
+  const p = presets[name] || { base: '', model: '' };
+  document.getElementById('cfg-base').value = p.base;
+  document.getElementById('cfg-model').value = p.model;
+  document.getElementById('cfg-key').focus();
+}
+
+async function loadConfig() {
+  try {
+    const resp = await fetch('/api/config');
+    const cfg = await resp.json();
+    document.getElementById('cfg-base').value = cfg.llm_api_base || '';
+    document.getElementById('cfg-model').value = cfg.llm_model || '';
+    if (cfg.has_key) {
+      document.getElementById('cfg-key').placeholder = cfg.llm_api_key_masked;
+    }
+  } catch (e) {}
+}
+
+async function testConnection() {
+  const status = document.getElementById('test-status');
+  status.className = 'test-status';
+  status.innerHTML = '<span>⏳ 正在测试...</span>';
+
+  try {
+    const resp = await fetch('/api/config/test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        llm_api_base: document.getElementById('cfg-base').value,
+        llm_api_key: document.getElementById('cfg-key').value,
+        llm_model: document.getElementById('cfg-model').value,
+      }),
+    });
+
+    const result = await resp.json();
+    if (resp.ok) {
+      status.className = 'test-status success';
+      status.innerHTML = `✅ 连接成功！LLM 回复: ${result.reply}`;
+    } else {
+      status.className = 'test-status error';
+      status.innerHTML = `❌ ${result.error}`;
+    }
+  } catch (e) {
+    status.className = 'test-status error';
+    status.innerHTML = `❌ 网络错误: ${e.message}`;
+  }
+}
+
+async function saveConfigAndClose() {
+  try {
+    const resp = await fetch('/api/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        llm_api_base: document.getElementById('cfg-base').value,
+        llm_api_key: document.getElementById('cfg-key').value,
+        llm_model: document.getElementById('cfg-model').value,
+      }),
+    });
+
+    const result = await resp.json();
+    if (resp.ok) {
+      showToast('✅ LLM 配置已保存');
+      closeSettings();
+      // Reload page to apply config
+      location.reload();
+    } else {
+      showToast('❌ 保存失败: ' + result.error);
+    }
+  } catch (e) {
+    showToast('❌ 网络错误: ' + e.message);
+  }
+}
+
+</script>
+</body>
+</html>
